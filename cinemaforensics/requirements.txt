@@ -1,0 +1,25 @@
+# Let pip resolve compatible versions automatically
+langchain
+langchain-anthropic
+langchain-community
+langgraph
+langchain-huggingface
+
+# Vector store
+faiss-cpu==1.8.0
+sentence-transformers==3.1.1
+
+# Tools & APIs
+requests==2.32.3
+wikipedia-api==0.6.0
+tavily-python==0.3.9
+
+# Utilities
+python-dotenv==1.0.1
+pydantic==2.8.2
+tenacity>=8.1.0,<9.0.0
+
+# Backend server
+fastapi==0.115.0
+uvicorn==0.30.6
+websockets==13.0.1

@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CinemaForensics</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400&family=Crimson+Pro:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;width:100%}
+:root{
+  --bg:#0a0908;--bg2:#111009;--bg3:#1a1710;
+  --gold:#c9a84c;--gold2:#e8c96a;
+  --dim:#6a5f4a;--muted:#3a3228;
+  --text:#ede4cc;--text2:#a89878;
+  --red:#e74c3c;--green:#2ecc71;--blue:#4a9fd4;--purple:#9b7fd4;--orange:#e67e22;
+  --border:#2e2820;
+}
+body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+
+.header{display:flex;align-items:center;justify-content:space-between;padding:18px 32px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0}
+.logo-title{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:6px;color:var(--gold);line-height:1}
+.logo-sub{font-size:10px;letter-spacing:4px;text-transform:uppercase;color:var(--dim);margin-top:3px}
+.header-right{display:flex;align-items:center;gap:14px}
+.reel{display:flex;gap:5px;align-items:center}
+.reel-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:reel 1.8s ease-in-out infinite}
+.reel-dot:nth-child(2){animation-delay:.3s}.reel-dot:nth-child(3){animation-delay:.6s}
+@keyframes reel{0%,100%{background:var(--muted)}50%{background:var(--gold)}}
+.status-wrap{display:flex;align-items:center;gap:8px}
+.status-dot{width:9px;height:9px;border-radius:50%;background:var(--muted);transition:all .3s}
+.status-dot.active{background:var(--green);animation:pulse 1.2s infinite}
+.status-dot.error{background:var(--red)}
+.status-dot.warn{background:var(--orange)}
+.status-label{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--dim);min-width:80px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.body{display:flex;flex:1;min-height:0}
+.left{display:flex;flex-direction:column;flex:1;min-width:0;border-right:1px solid var(--border)}
+
+.search-zone{padding:28px 32px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0}
+.search-label{font-size:10px;letter-spacing:4px;text-transform:uppercase;color:var(--dim);margin-bottom:12px}
+.search-row{display:flex;gap:10px;align-items:stretch}
+.search-input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:14px 20px;color:var(--text);font-family:'Crimson Pro',serif;font-size:18px;font-style:italic;outline:none;transition:border-color .2s}
+.search-input::placeholder{color:var(--dim);font-style:italic}
+.search-input:focus{border-color:var(--gold)}
+.search-input.blocked{border-color:var(--red);animation:shake .3s ease}
+.search-input.corrected{border-color:var(--orange)}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.analyze-btn{background:var(--gold);border:none;border-radius:3px;padding:0 28px;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:3px;color:#0a0908;cursor:pointer;transition:background .2s,transform .1s;white-space:nowrap}
+.analyze-btn:hover{background:var(--gold2)}
+.analyze-btn:active{transform:scale(.97)}
+.analyze-btn:disabled{background:var(--muted);color:var(--dim);cursor:not-allowed}
+
+.quick-row{display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap}
+.pill{font-size:11px;letter-spacing:1.5px;padding:6px 14px;border:1px solid var(--border);border-radius:2px;color:var(--dim);cursor:pointer;transition:all .2s;background:transparent;font-family:'DM Mono',monospace}
+.pill:hover{border-color:var(--gold);color:var(--gold)}
+.divider{width:1px;height:18px;background:var(--border);margin:0 4px}
+.mode-wrap{display:flex;align-items:center;gap:8px}
+.mode-lbl{font-size:10px;letter-spacing:1px;color:var(--dim);white-space:nowrap}
+.toggle{position:relative;width:40px;height:20px;cursor:pointer;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.tslider{position:absolute;inset:0;background:var(--muted);border-radius:10px;transition:.3s}
+.tslider:before{content:"";position:absolute;width:14px;height:14px;left:3px;top:3px;background:var(--dim);border-radius:50%;transition:.3s}
+.toggle input:checked+.tslider{background:rgba(201,168,76,.4);border:1px solid var(--gold)}
+.toggle input:checked+.tslider:before{transform:translateX(20px);background:var(--gold)}
+
+/* Ethics banner */
+.ethics-banner{display:none;margin:0 32px;margin-top:16px;padding:14px 18px;border-radius:3px;font-size:12px;line-height:1.6;border-left:4px solid}
+.ethics-banner.blocked{background:rgba(231,76,60,.08);border-color:var(--red);color:#ef9090;display:block}
+.ethics-banner.corrected{background:rgba(230,126,34,.08);border-color:var(--orange);color:#f0a060;display:block}
+.ethics-banner-title{font-size:10px;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;font-weight:500}
+
+.results-zone{flex:1;overflow-y:auto;padding:32px}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:16px;opacity:.25}
+.empty-icon{font-size:64px;line-height:1}
+.empty-text{font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--dim);text-align:center;line-height:1.8}
+
+.report{display:none}
+.report.on{display:block}
+.report-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;gap:16px;flex-wrap:wrap}
+.report-title{font-family:'Bebas Neue',sans-serif;font-size:40px;letter-spacing:4px;color:var(--gold);line-height:1}
+.vbadge{font-size:11px;letter-spacing:2px;text-transform:uppercase;padding:7px 16px;border-radius:2px;white-space:nowrap;margin-top:6px}
+.vbadge.high{background:rgba(231,76,60,.12);border:1px solid var(--red);color:var(--red)}
+.vbadge.medium{background:rgba(201,168,76,.1);border:1px solid var(--gold);color:var(--gold)}
+.vbadge.low{background:rgba(46,204,113,.08);border:1px solid var(--green);color:var(--green)}
+
+.score-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px}
+.stile{background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:20px;text-align:center}
+.snum{font-family:'Bebas Neue',sans-serif;font-size:48px;color:var(--gold);line-height:1}
+.slbl{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--dim);margin-top:6px}
+
+.verdict-box{font-family:'Crimson Pro',serif;font-size:16px;font-style:italic;color:var(--text2);margin-bottom:28px;padding:16px 20px;border-left:3px solid var(--gold);background:var(--bg3);border-radius:0 3px 3px 0;line-height:1.7}
+.sec-title{font-size:10px;letter-spacing:4px;text-transform:uppercase;color:var(--dim);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+
+.holes{display:flex;flex-direction:column;gap:14px}
+.hole{border:1px solid var(--border);border-left:4px solid var(--gold);border-radius:0 3px 3px 0;padding:16px 20px;background:var(--bg3);opacity:0;transform:translateY(10px);transition:opacity .4s,transform .4s}
+.hole.show{opacity:1;transform:translateY(0)}
+.hole.high{border-left-color:var(--red)}
+.hole.medium{border-left-color:var(--gold)}
+.hole.low{border-left-color:var(--blue)}
+.hole-top{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.hsev{font-size:9px;letter-spacing:2px;text-transform:uppercase;padding:3px 9px;border-radius:2px;flex-shrink:0}
+.hsev.high{background:rgba(231,76,60,.18);color:var(--red)}
+.hsev.medium{background:rgba(201,168,76,.14);color:var(--gold)}
+.hsev.low{background:rgba(74,159,212,.14);color:var(--blue)}
+.htitle{font-size:14px;color:var(--text);letter-spacing:.5px;font-weight:400;flex:1}
+.hcat{font-size:9px;padding:2px 7px;background:var(--muted);color:var(--dim);border-radius:1px;flex-shrink:0}
+.hdesc{font-family:'Crimson Pro',serif;font-size:15px;color:var(--text2);line-height:1.7}
+.hsource{font-size:10px;letter-spacing:1px;color:var(--dim);margin-top:8px}
+
+.notes{margin-top:28px;padding:20px;background:var(--bg3);border:1px solid var(--border);border-radius:3px}
+.notes-text{font-family:'Crimson Pro',serif;font-size:15px;color:var(--text2);line-height:1.8}
+.errs{margin-top:16px;padding:14px 18px;background:rgba(231,76,60,.06);border:1px solid rgba(231,76,60,.25);border-radius:3px;display:none}
+.errs.on{display:block}
+.err-item{font-size:11px;color:var(--red);margin-bottom:4px;line-height:1.5}
+
+.filmstrip{display:flex;gap:4px;padding:12px 32px;border-top:1px solid var(--border);background:var(--bg2);overflow-x:auto;flex-shrink:0;min-height:58px;align-items:center}
+.frame{width:56px;height:38px;flex-shrink:0;border:1px solid var(--border);border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:8px;color:var(--muted);letter-spacing:.5px;background:var(--bg3);cursor:pointer;transition:all .2s;text-align:center;padding:3px;line-height:1.3;overflow:hidden}
+.frame:hover,.frame.on{border-color:var(--gold);color:var(--gold)}
+.no-films{font-size:11px;letter-spacing:2px;color:var(--muted)}
+
+/* RIGHT PANEL */
+.right{width:320px;flex-shrink:0;background:var(--bg2);display:flex;flex-direction:column;min-height:0}
+.rpanel-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.rpanel-title{font-size:9px;letter-spacing:4px;text-transform:uppercase;color:var(--dim)}
+.cbtn{font-size:9px;letter-spacing:1px;color:var(--dim);cursor:pointer;background:none;border:none;font-family:'DM Mono',monospace;transition:color .2s;padding:4px 8px}
+.cbtn:hover{color:var(--gold)}
+
+.agents{padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0}
+.arow{display:flex;align-items:center;gap:10px;padding:5px 0}
+.adot{width:8px;height:8px;border-radius:50%;background:var(--muted);transition:background .3s;flex-shrink:0}
+.adot.running{background:var(--gold);animation:pulse .8s infinite}
+.adot.done{background:var(--green)}
+.adot.blocked{background:var(--red)}
+.aname{font-size:11px;letter-spacing:.5px;color:var(--dim);transition:color .3s;flex:1}
+.aname.on{color:var(--text)}
+.atag{font-size:9px;padding:2px 7px;border-radius:1px;background:var(--muted);color:var(--dim);white-space:nowrap}
+.atag.ethics-tag{background:rgba(230,126,34,.15);color:var(--orange)}
+
+.logs{flex:1;overflow-y:auto;padding:14px 20px;display:flex;flex-direction:column;gap:4px;min-height:0}
+.log{font-size:11px;line-height:1.6;word-break:break-word;opacity:0;animation:fi .25s forwards}
+@keyframes fi{to{opacity:1}}
+.log .ts{color:var(--muted);margin-right:6px;font-size:10px}
+.log.inf{color:#7ab3d4}.log.tol{color:#b39ddb}.log.wrn{color:var(--gold)}.log.suc{color:#66bb6a}.log.err{color:#ef5350}.log.eth{color:#f0a060}.log.def{color:var(--dim)}
+.tag-i{display:inline-block;padding:1px 5px;border-radius:1px;font-size:9px;margin-right:5px;vertical-align:middle}
+.t-orch{background:rgba(201,168,76,.15);color:var(--gold)}
+.t-fact{background:rgba(74,159,212,.15);color:var(--blue)}
+.t-detect{background:rgba(231,76,60,.15);color:var(--red)}
+.t-comm{background:rgba(155,127,212,.15);color:var(--purple)}
+.t-mem{background:rgba(46,204,113,.15);color:var(--green)}
+.t-ethics{background:rgba(230,126,34,.15);color:var(--orange)}
+
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--muted);border-radius:2px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="logo-title">CinemaForensics</div>
+    <div class="logo-sub">Multi-Agent Plot Intelligence System</div>
+  </div>
+  <div class="header-right">
+    <div class="reel"><div class="reel-dot"></div><div class="reel-dot"></div><div class="reel-dot"></div></div>
+    <div class="status-wrap">
+      <div class="status-dot" id="gDot"></div>
+      <div class="status-label" id="gStatus">Standby</div>
+    </div>
+  </div>
+</div>
+
+<div class="body">
+  <div class="left">
+    <div class="search-zone">
+      <div class="search-label">Film Under Investigation</div>
+      <div class="search-row">
+        <input class="search-input" id="movieInput" placeholder="e.g. Interstellar, The Dark Knight, Memento..."/>
+        <button class="analyze-btn" id="analyzeBtn" onclick="startAnalysis()">Analyze</button>
+      </div>
+      <div class="quick-row">
+        <button class="pill" onclick="setMovie('Interstellar')">Interstellar</button>
+        <button class="pill" onclick="setMovie('The Dark Knight')">The Dark Knight</button>
+        <button class="pill" onclick="setMovie('Inception')">Inception</button>
+        <button class="pill" onclick="setMovie('Tenet')">Tenet</button>
+        <button class="pill" onclick="setMovie('Parasite')">Parasite</button>
+        <button class="pill" onclick="setMovie('Memento')">Memento</button>
+        <div class="divider"></div>
+        <div class="mode-wrap">
+          <span class="mode-lbl">Fast</span>
+          <label class="toggle"><input type="checkbox" id="fastMode"><span class="tslider"></span></label>
+          <span class="mode-lbl" style="color:var(--text2)">Haiku · Sonnet</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ethics feedback banner — shown below search on block/correction -->
+    <div class="ethics-banner" id="ethicsBanner">
+      <div class="ethics-banner-title" id="ethicsBannerTitle"></div>
+      <div id="ethicsBannerMsg"></div>
+    </div>
+
+    <div class="results-zone" id="resultsZone">
+      <div class="empty" id="emptyState">
+        <div class="empty-icon">🎞</div>
+        <div class="empty-text">Submit a film title<br>to begin forensic analysis</div>
+      </div>
+
+      <div class="report" id="report">
+        <div class="report-head">
+          <div class="report-title" id="rTitle">—</div>
+          <div class="vbadge medium" id="rBadge">—</div>
+        </div>
+        <div class="score-grid">
+          <div class="stile"><div class="snum" id="sRisk">—</div><div class="slbl">Risk Score</div></div>
+          <div class="stile"><div class="snum" id="sHoles">—</div><div class="slbl">Plot Holes</div></div>
+          <div class="stile"><div class="snum" id="sCom">—</div><div class="slbl">Community</div></div>
+        </div>
+        <div class="verdict-box" id="rVerdict"></div>
+        <div class="sec-title">Identified Issues</div>
+        <div class="holes" id="holesList"></div>
+        <div class="notes" id="notesBox" style="display:none">
+          <div class="sec-title" style="margin-bottom:12px">Analysis Notes</div>
+          <div class="notes-text" id="notesText"></div>
+        </div>
+        <div class="errs" id="errsBox">
+          <div class="sec-title" style="margin-bottom:8px;color:var(--red)">Warnings</div>
+          <div id="errsList"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="filmstrip" id="filmstrip">
+      <div class="no-films">No analyses yet — results appear here</div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right">
+    <div class="rpanel-head">
+      <div class="rpanel-title">Agent Activity</div>
+      <button class="cbtn" onclick="clearLogs()">Clear</button>
+    </div>
+
+    <div class="agents">
+      <div class="arow">
+        <div class="adot" id="d-ethics"></div>
+        <div class="aname" id="n-ethics">Ethics Agent</div>
+        <div class="atag ethics-tag">safety</div>
+      </div>
+      <div class="arow">
+        <div class="adot" id="d-orch"></div>
+        <div class="aname" id="n-orch">Orchestrator</div>
+        <div class="atag">supervisor</div>
+      </div>
+      <div class="arow">
+        <div class="adot" id="d-fact"></div>
+        <div class="aname" id="n-fact">Fact Agent</div>
+        <div class="atag">OMDB + wiki</div>
+      </div>
+      <div class="arow">
+        <div class="adot" id="d-detect"></div>
+        <div class="aname" id="n-detect">Detective Agent</div>
+        <div class="atag">LLM reason</div>
+      </div>
+      <div class="arow">
+        <div class="adot" id="d-comm"></div>
+        <div class="aname" id="n-comm">Community Agent</div>
+        <div class="atag">web search</div>
+      </div>
+      <div class="arow">
+        <div class="adot" id="d-mem"></div>
+        <div class="aname" id="n-mem">Memory Agent</div>
+        <div class="atag">FAISS</div>
+      </div>
+    </div>
+
+    <div class="logs" id="logArea">
+      <div class="log def"><span class="ts">//</span>agent console ready</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let analyzing=false, filmHistory=[], ws=null;
+
+function wsUrl(){
+  const p=location.protocol==='https:'?'wss:':'ws:';
+  return `${p}//${location.host}/ws/analyze`;
+}
+
+function setMovie(t){
+  document.getElementById('movieInput').value=t;
+  hideEthicsBanner();
+}
+
+function setStatus(s){
+  const d=document.getElementById('gDot'),l=document.getElementById('gStatus');
+  d.className='status-dot'+(s==='analyzing'?' active':s==='error'?' error':s==='blocked'?' warn':'');
+  l.textContent=s.charAt(0).toUpperCase()+s.slice(1);
+}
+
+function setAgent(id,state){
+  const d=document.getElementById(`d-${id}`),n=document.getElementById(`n-${id}`);
+  if(!d)return;
+  d.className=`adot ${state}`;
+  n.className=`aname${state!=='idle'?' on':''}`;
+}
+
+function resetAgents(){
+  ['ethics','orch','fact','detect','comm','mem'].forEach(id=>setAgent(id,'idle'));
+}
+
+function showEthicsBanner(type, title, msg){
+  const banner=document.getElementById('ethicsBanner');
+  document.getElementById('ethicsBannerTitle').textContent=title;
+  document.getElementById('ethicsBannerMsg').textContent=msg;
+  banner.className=`ethics-banner ${type}`;
+  // shake the input if blocked
+  if(type==='blocked'){
+    const inp=document.getElementById('movieInput');
+    inp.classList.add('blocked');
+    setTimeout(()=>inp.classList.remove('blocked'),400);
+  }
+  if(type==='corrected'){
+    document.getElementById('movieInput').classList.add('corrected');
+  }
+}
+
+function hideEthicsBanner(){
+  document.getElementById('ethicsBanner').className='ethics-banner';
+  document.getElementById('movieInput').classList.remove('blocked','corrected');
+}
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+function addLog(agent,message){
+  const area=document.getElementById('logArea');
+  const now=new Date();
+  const ts=`${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+  const tagCls={orch:'t-orch',fact:'t-fact',detect:'t-detect',comm:'t-comm',mem:'t-mem',ethics:'t-ethics'};
+  const tagLbl={orch:'ORCH',fact:'FACT',detect:'DETC',comm:'COMM',mem:'MEM',ethics:'ETH'};
+  const typeCls={orch:'wrn',fact:'inf',detect:'err',comm:'tol',mem:'suc',ethics:'eth'};
+  const el=document.createElement('div');
+  el.className=`log ${typeCls[agent]||'def'}`;
+  el.innerHTML=`<span class="ts">${ts}</span><span class="tag-i ${tagCls[agent]||''}">${tagLbl[agent]||agent.toUpperCase()}</span>${esc(message)}`;
+  area.appendChild(el);
+  area.scrollTop=area.scrollHeight;
+  const all=area.querySelectorAll('.log');
+  if(all.length>300)all[0].remove();
+}
+
+function clearLogs(){
+  document.getElementById('logArea').innerHTML='<div class="log def"><span class="ts">//</span>console cleared</div>';
+}
+
+function detectState(agent,msg){
+  const u=msg.toUpperCase();
+  const running=['FETCHING','SEARCHING','ANALYZING','CHECKING','SYNTHESIZING','STORING','LOADING','CHECKING INPUT'];
+  const done=['GATHERED','FOUND','COMPLETE','STORED','READY','AGREEMENT','REPORT READY','LOADED','SAFE','CORRECTED'];
+  const blocked=['BLOCKED','FLAGGED','UNSAFE'];
+  if(blocked.some(w=>u.includes(w))){setAgent(agent,'blocked');return}
+  if(running.some(w=>u.includes(w)))setAgent(agent,'running');
+  else if(done.some(w=>u.includes(w)))setAgent(agent,'done');
+}
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+
+async function startAnalysis(){
+  if(analyzing)return;
+  const title=document.getElementById('movieInput').value.trim();
+  const fast=document.getElementById('fastMode').checked;
+  if(!title){document.getElementById('movieInput').focus();return}
+
+  analyzing=true;
+  hideEthicsBanner();
+  document.getElementById('analyzeBtn').disabled=true;
+  document.getElementById('report').className='report';
+  document.getElementById('emptyState').style.display='flex';
+  document.getElementById('holesList').innerHTML='';
+  document.getElementById('errsBox').className='errs';
+  document.getElementById('notesBox').style.display='none';
+  resetAgents();
+  setStatus('analyzing');
+  setAgent('ethics','running');
+
+  if(ws){try{ws.close()}catch(e){}}
+  ws=new WebSocket(wsUrl());
+
+  ws.onopen=()=>{ws.send(JSON.stringify({movie_title:title,fast_mode:fast}))};
+
+  ws.onmessage=(e)=>{
+    let msg;
+    try{msg=JSON.parse(e.data)}catch(ex){return}
+
+    if(msg.type==='log'){
+      const agent=msg.agent||'orch';
+      addLog(agent,msg.message);
+      detectState(agent,msg.message);
+
+      // Ethics agent corrected the title
+      if(agent==='ethics' && msg.message.includes('corrected')){
+        const match=msg.message.match(/→\s*'(.+?)'/);
+        if(match){
+          showEthicsBanner('corrected','Title auto-corrected',
+            `"${title}" was corrected to "${match[1]}" for better results.`);
+          document.getElementById('movieInput').value=match[1];
+        }
+      }
+    }
+    else if(msg.type==='result'){
+      setAgent('ethics','done');
+      renderReport(msg.data);
+      setStatus('complete');
+      ['orch','fact','detect','comm','mem'].forEach(id=>setAgent(id,'done'));
+      addLog('orch','[ORCHESTRATOR] Analysis complete.');
+      addToFilmstrip(title,msg.data);
+    }
+    else if(msg.type==='error'){
+      // Check if it's an ethics block
+      if(msg.message.includes('blocked') || msg.message.includes('flagged') || msg.message.includes('safety')){
+        setAgent('ethics','blocked');
+        setStatus('blocked');
+        showEthicsBanner('blocked','Request blocked by Ethics Agent', msg.message.replace('⚠ Request blocked: ',''));
+        addLog('ethics',`[ETHICS] ${msg.message}`);
+      } else {
+        addLog('orch',`[ERROR] ${msg.message}`);
+        setStatus('error');
+      }
+    }
+    else if(msg.type==='ping'){return}
+    else if(msg.type==='done'){
+      analyzing=false;
+      document.getElementById('analyzeBtn').disabled=false;
+    }
+  };
+
+  ws.onerror=()=>{
+    addLog('orch','[ERROR] WebSocket failed. Is the server running?');
+    setStatus('error');
+    analyzing=false;
+    document.getElementById('analyzeBtn').disabled=false;
+  };
+
+  ws.onclose=()=>{
+    if(analyzing){analyzing=false;document.getElementById('analyzeBtn').disabled=false;setStatus('standby')}
+  };
+}
+
+async function renderReport(r){
+  document.getElementById('emptyState').style.display='none';
+  document.getElementById('report').className='report on';
+  document.getElementById('rTitle').textContent=r.movie_title||'—';
+  document.getElementById('sRisk').textContent=r.risk_score??'—';
+  document.getElementById('sHoles').textContent=r.total_holes??'—';
+  document.getElementById('sCom').textContent=r.community_agreement||'—';
+
+  const badge=document.getElementById('rBadge');
+  const lbl=r.verdict_label||'Unknown';
+  badge.textContent=lbl;
+  badge.className='vbadge '+(lbl.includes('High')?'high':lbl.includes('Moderate')?'medium':'low');
+  document.getElementById('rVerdict').textContent=r.detective_verdict||r.community_notes||'';
+
+  const list=document.getElementById('holesList');
+  list.innerHTML='';
+  for(let i=0;i<(r.plot_holes||[]).length;i++){
+    await sleep(100);
+    const h=r.plot_holes[i];
+    const sev=h.severity||'low';
+    const el=document.createElement('div');
+    el.className=`hole ${sev}`;
+    el.innerHTML=`
+      <div class="hole-top">
+        <div class="hsev ${sev}">${sev}</div>
+        <div class="htitle">${esc(h.title||'')}</div>
+        <div class="hcat">${esc(h.category||'')}</div>
+      </div>
+      <div class="hdesc">${esc(h.description||'')}</div>
+      <div class="hsource">↳ source: ${esc(h.source||'')}</div>
+    `;
+    list.appendChild(el);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.add('show')));
+  }
+
+  if(r.analysis_notes){
+    document.getElementById('notesText').textContent=r.analysis_notes;
+    document.getElementById('notesBox').style.display='block';
+  }
+
+  const errs=r.errors_encountered||[];
+  if(errs.length){
+    document.getElementById('errsList').innerHTML=errs.map(e=>`<div class="err-item">⚠ ${esc(e)}</div>`).join('');
+    document.getElementById('errsBox').className='errs on';
+  }
+  document.getElementById('resultsZone').scrollTop=0;
+}
+
+function addToFilmstrip(title,report){
+  if(filmHistory.find(f=>f.title===title))return;
+  filmHistory.push({title,report});
+  const strip=document.getElementById('filmstrip');
+  strip.innerHTML='';
+  filmHistory.forEach((f,idx)=>{
+    const fr=document.createElement('div');
+    fr.className='frame'+(idx===filmHistory.length-1?' on':'');
+    fr.textContent=f.title.substring(0,10).toUpperCase();
+    fr.title=f.title;
+    fr.onclick=()=>{
+      strip.querySelectorAll('.frame').forEach((el,i)=>el.classList.toggle('on',i===idx));
+      renderReport(f.report);
+    };
+    strip.appendChild(fr);
+  });
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('movieInput').addEventListener('keydown',e=>{
+    if(e.key==='Enter')startAnalysis();
+  });
+});
+</script>
+</body>
+</html>
