@@ -139,31 +139,76 @@ def _detect_agent(msg: str) -> str:
     if "[ORCHESTRATOR]" in u: return "orch"
     return "orch"
 
-@app.get("/health")
-async def health():
-    return {"status": "ok", "service": "CinemaForensics"}
 
-@app.get("/memory/search")
-async def search_memory(q: str):
-    if not q:
-        return {"error": "Query parameter q is required"}
-    from agents.memory_agent import retrieve_memory
-    loop = asyncio.get_event_loop()
-    result = await loop.run_in_executor(None, retrieve_memory, q)
-    return result
 
-class PreferenceRequest(BaseModel):
-    key: str
-    value: str
+class FollowupRequest(BaseModel):
+    question: str
+    thread_id: str
 
-@app.post("/memory/preference")
-async def save_preference_endpoint(req: PreferenceRequest):
-    if not req.key or not req.value:
-        return {"error": "Both key and value are required"}
-    from agents.memory_agent import save_preference
-    loop = asyncio.get_event_loop()
-    result = await loop.run_in_executor(None, save_preference, req.key, req.value)
-    return result
+@app.post("/followup")
+async def followup(req: FollowupRequest):
+    if not req.question or not req.thread_id:
+        return {"error": "question and thread_id are required"}
+
+    from agents.orchestrator import get_graph
+    import config as cfg
+    import os
+    os.environ["ANTHROPIC_API_KEY"] = cfg.ANTHROPIC_API_KEY
+
+    graph = get_graph()
+    graph_config = {"configurable": {"thread_id": req.thread_id}}
+
+    try:
+        state = graph.get_state(graph_config)
+        if not state or not state.values:
+            return {"error": "No active session found. Analyze a movie first."}
+
+        final_report = state.values.get("final_report", {})
+        movie_title  = state.values.get("movie_title", "unknown")
+
+        lines = [
+            "Movie: " + str(movie_title),
+            "Risk score: " + str(final_report.get("risk_score", "N/A")),
+            "Verdict: " + str(final_report.get("verdict_label", "N/A")),
+            "Total plot holes: " + str(final_report.get("total_holes", 0)),
+            "Detective verdict: " + str(final_report.get("detective_verdict", "")),
+            "Community notes: " + str(final_report.get("community_notes", "")),
+            "Analysis notes: " + str(final_report.get("analysis_notes", "")),
+        ]
+
+        holes = final_report.get("plot_holes", [])
+        if holes:
+            lines.append("Plot holes found:")
+            for h in holes[:6]:
+                sev   = str(h.get("severity", "")).upper()
+                title = str(h.get("title", ""))
+                desc  = str(h.get("description", ""))[:100]
+                lines.append("  [" + sev + "] " + title + " - " + desc)
+
+        context = "\n".join(lines)
+
+        from langchain_anthropic import ChatAnthropic
+        llm = ChatAnthropic(
+            model=cfg.CLAUDE_FAST_MODEL,
+            temperature=0.3,
+            max_tokens=1024,
+            timeout=30,
+        )
+
+        prompt = (
+            "You are CinemaForensics assistant. The user just completed a movie analysis.\n\n"
+            "Session context:\n" + context + "\n\n"
+            "Answer the user follow-up question using this context. "
+            "Be concise and reference specific plot holes or scores where relevant.\n\n"
+            "User question: " + str(req.question)
+        )
+
+        response = llm.invoke(prompt)
+        return {"answer": response.content, "thread_id": req.thread_id}
+
+    except Exception as e:
+        return {"error": "Follow-up failed: " + str(e)}
+
 
 if __name__ == "__main__":
     import uvicorn
